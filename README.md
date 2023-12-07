@@ -4,7 +4,7 @@
 
 ## Minimum Supported Rust Version
 
-Requires Rust **1.65.0** or higher.
+Requires Rust **1.69.0** or higher.
 
 Minimum supported Rust version can be changed in the future, but it will be done with a
 minor version bump.
@@ -17,6 +17,30 @@ The `RAYON_NUM_THREADS` environment variable can be used to set the number of th
 You can disable `rayon` by disabling the `"multicore"` feature.
 Warning! Halo2 will lose access to parallelism if you disable the `"multicore"` feature.
 This will significantly degrade performance.
+
+## GPU Acceleration
+
+If you have access to NVIDIA GPUs, you can enable acceleration by building with the feature `icicle_gpu` and setting the following environment variable:
+
+```sh
+export ENABLE_ICICLE_GPU=true
+```
+
+GPU acceleration is provided by [Icicle](https://github.com/ingonyama-zk/icicle)
+
+To go back to running with CPU, the previous environment variable must be **unset** instead of being switched to a value of false:
+
+```sh
+unset ENABLE_ICICLE_GPU
+```
+
+>**NOTE:** Even with the above environment variable set, for circuits where k <= 8, icicle is only enabled in certain areas where batching MSMs will help; all other places will fallback to using CPU MSM. To change the value of `k` where icicle is enabled, you can set the environment variable `ICICLE_IS_SMALL_CIRCUIT`.
+> 
+> Example: The following will cause icicle single MSM to be used throughout when k > 10 and CPU single MSM with certain locations using icicle batched MSM when k <= 10
+>```sh
+>export ICICLE_IS_SMALL_CIRCUIT=10
+>```
+>
 
 ## License
 

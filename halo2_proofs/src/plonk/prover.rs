@@ -287,6 +287,8 @@ where
         }
     }
 
+    #[cfg(feature = "profile")]
+    let start = std::time::Instant::now();
     let (advice, challenges) = {
         let mut advice = vec![
             AdviceSingle::<Scheme::Curve, LagrangeCoeff> {
@@ -364,11 +366,34 @@ where
                     .iter()
                     .map(|_| Blind(Scheme::Scalar::random(&mut rng)))
                     .collect();
+
+                let now = std::time::Instant::now();
+                #[cfg(feature = "icicle_gpu")]
+                let mut advice_commitments_projective: Vec<_>;
+                #[cfg(feature = "icicle_gpu")]
+                if std::env::var("ENABLE_ICICLE_GPU").is_ok() && icicle::is_small_circuit(advice_values[0].len()) {
+                    advice_commitments_projective = params.commit_lagrange_batch(
+                        &advice_values,
+                        &blinds
+                    );
+                    println!("GPU: advice_commitments_projective of length {} took: {}", advice_commitments_projective.len(), now.elapsed().as_millis());
+                } else {
+                    advice_commitments_projective = advice_values
+                        .iter()
+                        .zip(blinds.iter())
+                        .map(|(poly, blind)| params.commit_lagrange(poly, *blind) )
+                        .collect();
+                }
+                
+                #[cfg(not(feature = "icicle_gpu"))]
                 let advice_commitments_projective: Vec<_> = advice_values
                     .iter()
                     .zip(blinds.iter())
-                    .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
+                    .map(|(poly, blind)| params.commit_lagrange(poly, *blind) )
                     .collect();
+                #[cfg(not(feature = "icicle_gpu"))]
+                println!("CPU: advice_commitments_projective of length {} took: {}", advice_commitments_projective.len(), now.elapsed().as_millis());
+
                 let mut advice_commitments =
                     vec![Scheme::Curve::identity(); advice_commitments_projective.len()];
                 <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
@@ -405,10 +430,13 @@ where
 
         (advice, challenges)
     };
-
+    #[cfg(feature = "profile")]
+    println!("advice, challenges: {}", start.elapsed().as_millis());
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
 
+    #[cfg(feature = "profile")]
+    let start = std::time::Instant::now();
     let lookups: Vec<Vec<lookup::prover::Permuted<Scheme::Curve>>> = instance
         .iter()
         .zip(advice.iter())
@@ -435,6 +463,8 @@ where
                 .collect()
         })
         .collect::<Result<Vec<_>, _>>()?;
+    #[cfg(feature = "profile")]
+    println!("Lookup #1 commit_permuted: {}", start.elapsed().as_millis());
 
     // Sample beta challenge
     let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
@@ -443,6 +473,8 @@ where
     let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
 
     // Commit to permutations.
+    #[cfg(feature = "profile")]
+    let start = std::time::Instant::now();
     let permutations: Vec<permutation::prover::Committed<Scheme::Curve>> = instance
         .iter()
         .zip(advice.iter())
@@ -461,7 +493,11 @@ where
             )
         })
         .collect::<Result<Vec<_>, _>>()?;
+    #[cfg(feature = "profile")]
+    println!("permutations: {}", start.elapsed().as_millis());
 
+    #[cfg(feature = "profile")]
+    let start = std::time::Instant::now();
     let lookups: Vec<Vec<lookup::prover::Committed<Scheme::Curve>>> = lookups
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
@@ -472,7 +508,11 @@ where
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
+    #[cfg(feature = "profile")]
+    println!("lookups #2 commit_product: {}", start.elapsed().as_millis());
 
+    #[cfg(feature = "profile")]
+    let start = std::time::Instant::now();
     let shuffles: Vec<Vec<shuffle::prover::Committed<Scheme::Curve>>> = instance
         .iter()
         .zip(advice.iter())
@@ -500,9 +540,15 @@ where
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
+    #[cfg(feature = "profile")]
+    println!("shuffles commit_product: {}", start.elapsed().as_millis());
 
     // Commit to the vanishing argument's random polynomial for blinding h(x_3)
+    #[cfg(feature = "profile")]
+    let start = std::time::Instant::now();
     let vanishing = vanishing::Argument::commit(params, domain, &mut rng, transcript)?;
+    #[cfg(feature = "profile")]
+    println!("Vanishing #1: {}", start.elapsed().as_millis());
 
     // Obtain challenge for keeping all separate gates linearly independent
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
@@ -548,7 +594,11 @@ where
     );
 
     // Construct the vanishing argument's h(X) commitments
+    #[cfg(feature = "profile")]
+    let start = std::time::Instant::now();
     let vanishing = vanishing.construct(params, domain, h_poly, &mut rng, transcript)?;
+    #[cfg(feature = "profile")]
+    println!("vanishing #2: {}", start.elapsed().as_millis());
 
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let xn = x.pow([params.n()]);
@@ -693,9 +743,14 @@ where
         .chain(vanishing.open(x));
 
     let prover = P::new(params);
-    prover
+    #[cfg(feature = "profile")]
+    let start = std::time::Instant::now();
+    let proof = prover
         .create_proof(rng, transcript, instances)
-        .map_err(|_| Error::ConstraintSystemFailure)
+        .map_err(|_| Error::ConstraintSystemFailure);
+    #[cfg(feature = "profile")]
+    println!("Prover.create_proof: {}", start.elapsed().as_millis());
+    proof
 }
 
 #[test]

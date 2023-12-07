@@ -3,7 +3,7 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
-use crate::arithmetic::{best_multiexp, g_to_lagrange, parallelize, CurveAffine, CurveExt};
+use crate::arithmetic::{best_multiexp_cpu, g_to_lagrange, parallelize, CurveAffine, CurveExt};
 use crate::helpers::CurveRead;
 use crate::poly::commitment::{Blind, CommitmentScheme, Params, ParamsProver, ParamsVerifier};
 use crate::poly::ipa::msm::MSMIPA;
@@ -99,7 +99,32 @@ impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
         tmp_bases.extend(self.g_lagrange.iter());
         tmp_bases.push(self.w);
 
-        best_multiexp::<C>(&tmp_scalars, &tmp_bases)
+        best_multiexp_cpu::<C>(&tmp_scalars, &tmp_bases)
+    }
+
+    #[cfg(feature = "icicle_gpu")]
+    /// Falls back to single CPU MSM
+    fn commit_lagrange_batch(
+        &self,
+        polys: &Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
+        rs: &Vec<Blind<C::Scalar>>,
+    ) -> Vec<C::Curve> {
+        polys
+            .iter()
+            .zip(rs.iter())
+            .map(|(poly, r)| {
+                let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
+                let mut tmp_bases = Vec::with_capacity(poly.len() + 1);
+        
+                tmp_scalars.extend(poly.iter());
+                tmp_scalars.push(r.0);
+        
+                tmp_bases.extend(self.g_lagrange.iter());
+                tmp_bases.push(self.w);
+        
+                best_multiexp_cpu::<C>(&tmp_scalars, &tmp_bases)
+            })
+            .collect::<Vec<C::Curve>>()        
     }
 
     /// Writes params to a buffer.
@@ -219,7 +244,28 @@ impl<'params, C: CurveAffine> ParamsProver<'params, C> for ParamsIPA<C> {
         tmp_bases.extend(self.g.iter());
         tmp_bases.push(self.w);
 
-        best_multiexp::<C>(&tmp_scalars, &tmp_bases)
+        best_multiexp_cpu::<C>(&tmp_scalars, &tmp_bases)
+    }
+
+    #[cfg(feature = "icicle_gpu")]
+    /// Falls back to single CPU MSM
+    fn commit_batch(&self, polys: &Vec<Polynomial<C::Scalar, Coeff>>, rs: &Vec<Blind<C::Scalar>>) -> Vec<C::Curve> {
+        polys
+            .iter()
+            .zip(rs.iter())
+            .map(|(poly, r)| {
+                let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
+                let mut tmp_bases = Vec::with_capacity(poly.len() + 1);
+
+                tmp_scalars.extend(poly.iter());
+                tmp_scalars.push(r.0);
+
+                tmp_bases.extend(self.g.iter());
+                tmp_bases.push(self.w);
+
+                best_multiexp_cpu::<C>(&tmp_scalars, &tmp_bases)
+            })
+            .collect::<Vec<C::Curve>>()
     }
 
     fn get_g(&self) -> &[C] {
