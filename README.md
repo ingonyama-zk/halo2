@@ -34,11 +34,11 @@ To go back to running with CPU, the previous environment variable must be **unse
 unset ENABLE_ICICLE_GPU
 ```
 
->**NOTE:** Even with the above environment variable set, for circuits where k <= 8, icicle is only enabled in certain areas where batching MSMs will help; all other places will fallback to using CPU MSM. To change the value of `k` where icicle is enabled, you can set the environment variable `ICICLE_IS_SMALL_CIRCUIT`.
+>**NOTE:** Even with the above environment variable set, for circuits where k <= 8, icicle is only enabled in certain areas where batching MSMs will help; all other places will fallback to using CPU MSM. To change the value of `k` where icicle is enabled, you can set the environment variable `ICICLE_SMALL_CIRCUIT`.
 > 
 > Example: The following will cause icicle single MSM to be used throughout when k > 10 and CPU single MSM with certain locations using icicle batched MSM when k <= 10
 >```sh
->export ICICLE_IS_SMALL_CIRCUIT=10
+>export ICICLE_SMALL_CIRCUIT=10
 >```
 >
 
