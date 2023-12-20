@@ -18,6 +18,9 @@ use crate::{
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 
+#[cfg(feature = "icicle_gpu")]
+use crate::icicle;
+
 pub(crate) struct CommittedSet<C: CurveAffine> {
     pub(crate) permutation_product_poly: Polynomial<C::Scalar, Coeff>,
     pub(crate) permutation_product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,

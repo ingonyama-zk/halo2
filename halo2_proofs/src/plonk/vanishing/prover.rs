@@ -17,6 +17,9 @@ use crate::{
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 
+#[cfg(feature = "icicle_gpu")]
+use crate::icicle;
+
 pub(in crate::plonk) struct Committed<C: CurveAffine> {
     random_poly: Polynomial<C::Scalar, Coeff>,
     random_blind: Blind<C::Scalar>,

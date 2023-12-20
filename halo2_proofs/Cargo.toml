@@ -58,6 +58,7 @@ blake2b_simd = "1"
 sha3 = "0.9.1"
 rand_chacha = "0.3"
 maybe-rayon = { version = "0.1.0", default-features = false }
+log = "0.4.20"
 
 # Developer tooling dependencies
 plotters = { version = "0.3.0", default-features = false, optional = true }

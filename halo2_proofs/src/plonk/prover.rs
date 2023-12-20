@@ -30,6 +30,9 @@ use crate::{
 };
 use group::prime::PrimeCurveAffine;
 
+#[cfg(feature = "icicle_gpu")]
+use crate::icicle;
+
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
 /// generated previously for the same circuit. The provided `instances`
