@@ -9,12 +9,9 @@ use group::{
     prime::PrimeCurveAffine,
     Curve, GroupOpsOwned, ScalarMulOwned,
 };
-use icicle_bn254::curve::G1Affine;
-use icicle_runtime::{
-    memory::DeviceSlice,
-    stream::IcicleStream,
-};
-
+use icicle_bn254::curve::CurveCfg;
+use icicle_core::curve::Affine;
+use icicle_runtime::memory::DeviceSlice;
 
 use halo2curves::msm::msm_best;
 pub use halo2curves::{CurveAffine, CurveExt};
@@ -52,7 +49,7 @@ pub fn best_multiexp_cpu<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C
 }
 
 /// Performs a multi-exponentiation operation on GPU using Icicle library
-pub fn best_multiexp_gpu<C: CurveAffine>(coeffs: &[C::Scalar], g: &DeviceSlice<G1Affine>, stream: &IcicleStream) -> C::Curve {
+pub fn best_multiexp_gpu<C: CurveAffine>(coeffs: &[C::Scalar], g: &DeviceSlice<Affine<CurveCfg>>, stream: &IcicleStream) -> C::Curve {
     icicle::multiexp_on_device::<C>(coeffs, g, stream)
 }
 
@@ -325,6 +322,7 @@ pub fn bitreverse(mut n: usize, l: usize) -> usize {
     r
 }
 
+use icicle_runtime::stream::IcicleStream;
 #[cfg(test)]
 use rand_core::OsRng;
 

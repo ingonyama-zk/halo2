@@ -299,8 +299,7 @@ pub fn multiexp_on_device<C: CurveAffine>(coeffs: &[C::Scalar], bases: &DeviceSl
     let mut msm_results = DeviceVec::<G1Projective>::device_malloc_async(1, stream).unwrap();
     let mut cfg = msm::MSMConfig::default();
     cfg.stream_handle = stream.into();
-    cfg.is_async    = true;
-    cfg.c = 17;
+    cfg.is_async = true;
 
     msm::msm(&coeffs, bases, &cfg, &mut msm_results[..]).unwrap();
 

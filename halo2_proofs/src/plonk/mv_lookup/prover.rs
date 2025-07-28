@@ -223,9 +223,8 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
         }
 
         // commit to m(X)
-        let blind = Blind(C::Scalar::ZERO);
         let start = instant::Instant::now();
-        let m_commitment = params.commit_lagrange(&m_values, blind.clone()).to_affine();
+        let m_commitment = params.commit_lagrange(&m_values, Blind::default()).to_affine();
         log::trace!("m_commitment {:?}", start.elapsed());
 
         // write commitment of m(X) to transcript
